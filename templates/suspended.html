@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suspended Accounts - ProctorAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <span class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></span>
+                    Suspended Accounts
+                </h1>
+                <p class="text-slate-400 text-sm mt-1">Review and manage accounts blocked due to maximum violations.</p>
+            </div>
+        </header>
+
+        {% if banned_students %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for student in banned_students %}
+            <div class="glass-panel p-6 border-l-4 border-red-500">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-white">{{ student['full_name'] }}</h2>
+                        <p class="text-sm text-slate-400 font-mono mt-1">{{ student['roll_number'] }}</p>
+                        <p class="text-sm text-slate-400">{{ student['email'] }}</p>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-slate-700/50 flex justify-between items-center">
+                    <span class="text-xs text-red-400 font-medium">Suspended until: {{ student['banned_until'] }}</span>
+                    <button onclick="unbanStudent({{ student['student_id'] }})" class="bg-slate-700 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+                        Restore Access
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="glass-panel p-10 text-center flex flex-col items-center justify-center">
+            <svg class="w-16 h-16 text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h3 class="text-xl font-bold text-white">No Suspended Accounts</h3>
+            <p class="text-slate-400 mt-2">All student accounts are currently in good standing.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function unbanStudent(studentId) {
+            if (confirm("Are you sure you want to restore access for this suspended account?")) {
+                fetch('/admin/unban', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_id: studentId })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        location.reload();
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>

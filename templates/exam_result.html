@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Results - ProctorAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: #09090b; color: #f8fafc; }
+        .glass-card { background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
+        .animated-bg {
+            position: fixed; top: 0; left: 0; w: 100vw; h: 100vh; z-index: -1;
+            background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15), transparent 40%);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-8 relative">
+    
+    <div class="animated-bg"></div>
+
+    <div class="max-w-4xl mx-auto">
+        <header class="flex justify-between items-center mb-10 glass-card p-6 rounded-3xl border-l-4 {% if result['is_disqualified'] %}border-red-500{% else %}border-green-500{% endif %}">
+            <div>
+                <h1 class="text-3xl font-black text-white">Results: {{ exam['title'] }}</h1>
+                <p class="text-slate-400 font-semibold tracking-wide uppercase text-sm mt-1">Detailed Analysis</p>
+            </div>
+            <a href="/student/dashboard" class="glass-card px-8 py-3 rounded-xl text-white font-bold hover:bg-white/10 transition-all">← Dashboard</a>
+        </header>
+
+        <!-- Score Card -->
+        <div class="glass-card p-10 rounded-3xl mb-10 flex flex-col items-center justify-center text-center relative overflow-hidden">
+            {% if result['is_disqualified'] %}
+                <div class="absolute inset-0 bg-red-500/10"></div>
+                <h2 class="text-2xl font-bold text-red-500 mb-2">DISQUALIFIED</h2>
+                <p class="text-slate-400 mb-6">Your exam was terminated due to exceeding the maximum warning limit.</p>
+                <div class="text-7xl font-black text-white">0 <span class="text-2xl text-slate-500">/ {{ exam['total_marks'] }}</span></div>
+            {% else %}
+                <div class="absolute inset-0 bg-green-500/5"></div>
+                <h2 class="text-xl font-bold text-slate-300 mb-2 uppercase tracking-widest">Final Score</h2>
+                <div class="text-7xl font-black text-white mb-4">{{ result['score'] }} <span class="text-2xl text-slate-500">/ {{ exam['total_marks'] }}</span></div>
+                <div class="text-green-400 font-bold bg-green-500/10 px-4 py-2 rounded-full border border-green-500/20">Successfully Completed</div>
+            {% endif %}
+        </div>
+
+        <h3 class="text-xl font-bold mb-6 flex items-center gap-3">
+            <span class="w-2 h-6 bg-blue-500 rounded-full block"></span> Question Review
+        </h3>
+
+        <div class="space-y-6">
+            {% for q in questions %}
+            <div class="glass-card p-8 rounded-3xl border border-slate-700/50">
+                <div class="flex items-start gap-4 mb-6">
+                    <span class="text-2xl font-black text-slate-600">{{ loop.index }}.</span>
+                    <h4 class="text-lg font-semibold text-white">{{ q['question_text'] }}</h4>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-12">
+                    {% for opt, letter in [(q['option_a'], 'A'), (q['option_b'], 'B'), (q['option_c'], 'C'), (q['option_d'], 'D')] %}
+                        
+                        {% set is_selected = (q['selected_option'] == letter) %}
+                        {% set is_correct = (q['correct_option'] == letter) %}
+                        
+                        <div class="p-4 rounded-xl border flex items-center justify-between
+                            {% if is_correct %}
+                                bg-green-500/20 border-green-500/50 text-green-100 font-bold
+                            {% elif is_selected and not is_correct %}
+                                bg-red-500/20 border-red-500/50 text-red-100
+                            {% else %}
+                                bg-slate-800/30 border-slate-700/50 text-slate-400
+                            {% endif %}
+                        ">
+                            <span>{{ letter }}) {{ opt }}</span>
+                            
+                            {% if is_correct %}
+                                <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            {% elif is_selected and not is_correct %}
+                                <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

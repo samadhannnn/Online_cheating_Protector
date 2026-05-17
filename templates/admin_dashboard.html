@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProctorAI Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-4 md:p-6 gap-6">
+
+    <!-- Header -->
+    <header class="glass-panel px-6 py-4 flex justify-between items-center shrink-0 shadow-lg">
+        <div class="flex items-center gap-4">
+            <div class="bg-blue-600 p-2 rounded-lg text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">ProctorAI Dashboard</h1>
+                <p class="text-sm text-blue-300 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span> Live Monitoring Active
+                </p>
+            </div>
+        </div>
+        
+        <div class="flex gap-3">
+            <a href="/admin/screenshots" class="px-5 py-2 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-slate-700 font-medium transition-all flex items-center gap-2">
+                Evidence Vault
+            </a>
+            <a href="/admin/analytics" class="px-5 py-2 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-slate-700 font-medium transition-all flex items-center gap-2">
+                Analytics
+            </a>
+            <a href="/logout" class="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
+                Logout
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex gap-6 min-h-0">
+        
+        <!-- Left Column: Active Students Matrix -->
+        <div class="flex-1 flex flex-col gap-6 min-w-0">
+            
+            <!-- Global Stats Bar -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 shrink-0">
+                <div class="glass-panel p-5 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-sm text-slate-400 font-medium">Active Students</p>
+                        <p class="text-2xl font-bold text-white" id="active-count">{{ active_sessions|length }}</p>
+                    </div>
+                </div>
+                
+                <!-- Banned students stat -->
+                <button onclick="document.getElementById('suspended-modal').classList.remove('hidden'); document.getElementById('suspended-modal').classList.add('flex')" class="glass-panel p-5 flex items-center gap-4 border border-transparent transition-all hover:bg-white/5 hover:scale-105 cursor-pointer {% if banned_students %} border-red-500/30 {% endif %} text-left w-full focus:outline-none">
+                    <div class="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center text-red-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-sm text-slate-400 font-medium">Suspended Accounts</p>
+                        <p class="text-2xl font-bold text-white">{{ banned_students|length }}</p>
+                    </div>
+                </button>
+
+                <div class="glass-panel p-5 flex flex-col justify-center">
+                    <p class="text-sm text-slate-400 font-medium mb-2">System Status</p>
+                    <div class="flex items-center gap-3">
+                        <span class="relative flex h-3 w-3">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        </span>
+                        <span class="text-white font-medium">AI Monitoring Engine Online</span>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- Video Feeds Grid -->
+            <div class="glass-panel flex-1 p-6 flex flex-col overflow-hidden relative">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                        Live Examination Feeds
+                    </h2>
+                </div>
+
+                <div class="flex-1 overflow-y-auto pr-2" id="grid-container">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="streams-grid">
+                        {% for session in active_sessions %}
+                        <div class="bg-slate-800 rounded-xl overflow-hidden flex flex-col shadow-lg border border-slate-700 transition-all duration-300" id="student-card-{{ session['student_id'] }}">
+                            
+                            <!-- Status Header -->
+                            <div class="px-4 py-3 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-2 h-2 rounded-full bg-green-500" id="dot-{{ session['student_id'] }}"></span>
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-semibold text-white truncate w-32" title="{{ session['full_name'] }}">{{ session['full_name'] }}</span>
+                                        <span class="text-xs text-slate-400">{{ session['title'] }}</span>
+                                    </div>
+                                </div>
+                                <div class="text-xs font-semibold bg-slate-700 text-white px-2.5 py-1 rounded-md" id="warn-badge-{{ session['student_id'] }}">
+                                    Warnings: {{ session['warnings_count'] }}
+                                </div>
+                            </div>
+                            
+                            <!-- Video Feed -->
+                            <div class="bg-black aspect-video relative flex items-center justify-center">
+                                <img id="stream-{{ session['student_id'] }}" src="" alt="" class="w-full h-full object-cover">
+                                <span class="absolute text-slate-500 text-xs font-medium animate-pulse" id="placeholder-{{ session['student_id'] }}">Connecting to camera...</span>
+                            </div>
+                            
+                            <!-- Action Footer -->
+                            <div class="p-3 bg-slate-800/50 flex justify-between items-center gap-2">
+                                <div class="flex-1">
+                                    <p class="text-xs text-slate-400 font-medium truncate" id="status-{{ session['student_id'] }}">Status Normal</p>
+                                </div>
+                                <button onclick="terminateSession({{ session['student_id'] }}, '{{ session['exam_id'] }}')" class="shrink-0 px-3 py-1.5 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-colors text-xs font-semibold" title="End Exam Immediately">
+                                    Terminate Exam
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if not active_sessions %}
+                    <div id="no-sessions-msg" class="h-full flex flex-col items-center justify-center text-slate-400">
+                        <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <p class="text-lg font-medium">No Active Exams</p>
+                        <p class="text-sm mt-1">Waiting for students to join...</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Logs & Recent Scores -->
+        <div class="w-96 flex flex-col gap-6 min-w-0 shrink-0">
+            
+            <!-- Live Alerts -->
+            <div class="glass-panel flex-1 p-5 flex flex-col overflow-hidden">
+                <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    Recent Alerts
+                </h2>
+                <div class="flex-1 overflow-y-auto pr-2 space-y-3" id="threat-log">
+                    <div class="text-sm text-slate-500 text-center py-4" id="empty-log-msg">
+                        No recent anomalies detected.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Exam Results -->
+            <div class="glass-panel h-80 p-5 flex flex-col overflow-hidden">
+                <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Completed Exams
+                </h2>
+                <div class="flex-1 overflow-y-auto pr-2 space-y-3" id="recent-scores-list">
+                    {% if recent_results %}
+                        {% for result in recent_results %}
+                        <div class="bg-slate-800 p-4 rounded-lg flex justify-between items-center border border-slate-700">
+                            <div>
+                                <p class="text-sm font-semibold text-white">{{ result['full_name'] }}</p>
+                                <p class="text-xs text-slate-400 mt-0.5 truncate w-36">{{ result['title'] }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xl font-bold {% if result['is_disqualified'] %}text-red-500{% else %}text-green-400{% endif %}">
+                                    {{ result['score'] }}
+                                </p>
+                                <p class="text-xs text-slate-500 mt-0.5">
+                                    {% if result['is_disqualified'] %}Disqualified{% else %}{{ result['warnings_count'] }} Warnings{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-sm text-slate-500 text-center py-4">
+                            No recent submissions.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Suspended Accounts Modal -->
+    <div id="suspended-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center opacity-0 transition-opacity duration-300 [&.flex]:opacity-100">
+        <div class="bg-slate-900 border border-slate-700/50 w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] transform scale-95 transition-transform duration-300 [&.flex]:scale-100">
+            <div class="p-6 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
+                <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                    <span class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></span>
+                    Suspended Accounts Management
+                </h2>
+                <button onclick="document.getElementById('suspended-modal').classList.add('hidden'); document.getElementById('suspended-modal').classList.remove('flex')" class="text-slate-400 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto flex-1 space-y-4">
+                {% if banned_students %}
+                    {% for student in banned_students %}
+                    <div class="bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20">
+                                <span class="text-red-500 font-bold text-lg">{{ student['full_name'][0] }}</span>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white">{{ student['full_name'] }}</h3>
+                                <p class="text-sm text-slate-400 font-mono">{{ student['roll_number'] }} • {{ student['email'] }}</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col sm:items-end gap-2">
+                            <span class="text-xs text-red-400 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20 whitespace-nowrap">Banned Until: {{ student['banned_until'].split()[1] if ' ' in student['banned_until'] else student['banned_until'] }}</span>
+                            <button onclick="unbanStudent({{ student['student_id'] }})" class="bg-slate-700 hover:bg-green-600 text-white px-5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-lg">
+                                Restore Access
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="flex flex-col items-center justify-center py-12 text-center">
+                        <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                            <svg class="w-10 h-10 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">All Clear</h3>
+                        <p class="text-slate-400 mt-2">No students are currently suspended.</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="p-6 border-t border-slate-700/50 bg-slate-800/30 flex justify-end">
+                <button onclick="document.getElementById('suspended-modal').classList.add('hidden'); document.getElementById('suspended-modal').classList.remove('flex')" class="px-6 py-2 rounded-xl font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        
+        socket.on('connect', () => {
+            socket.emit('admin_join', {});
+        });
+
+        function logThreat(studentName, violation, time = new Date().toLocaleTimeString('en-US', {hour12: false})) {
+            const logContainer = document.getElementById('threat-log');
+            const emptyMsg = document.getElementById('empty-log-msg');
+            if(emptyMsg) emptyMsg.remove();
+            
+            const div = document.createElement('div');
+            div.className = "bg-orange-500/10 border border-orange-500/20 p-3 rounded-lg animate-[fadeIn_0.3s_ease-out]";
+            div.innerHTML = `
+                <div class="flex justify-between text-xs text-orange-400 mb-1">
+                    <span class="font-medium">${studentName}</span>
+                    <span class="text-slate-400">${time}</span>
+                </div>
+                <div class="text-sm text-white">${violation}</div>
+            `;
+            logContainer.prepend(div);
+            if (logContainer.children.length > 50) logContainer.lastChild.remove();
+        }
+
+        socket.on('new_student_joined', (data) => {
+            const grid = document.getElementById('streams-grid');
+            const noMsg = document.getElementById('no-sessions-msg');
+            if (noMsg) noMsg.style.display = 'none';
+            
+            if (document.getElementById('student-card-' + data.student_id)) return;
+            
+            const cardHtml = `
+                <div class="bg-slate-800 rounded-xl overflow-hidden flex flex-col shadow-lg border border-slate-700 transition-all duration-300" id="student-card-${data.student_id}">
+                    <div class="px-4 py-3 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
+                        <div class="flex items-center gap-3">
+                            <span class="w-2 h-2 rounded-full bg-green-500" id="dot-${data.student_id}"></span>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-white truncate w-32" title="${data.full_name}">${data.full_name}</span>
+                                <span class="text-xs text-slate-400">${data.title}</span>
+                            </div>
+                        </div>
+                        <div class="text-xs font-semibold bg-slate-700 text-white px-2.5 py-1 rounded-md" id="warn-badge-${data.student_id}">
+                            Warnings: ${data.warnings_count}
+                        </div>
+                    </div>
+                    <div class="bg-black aspect-video relative flex items-center justify-center">
+                        <img id="stream-${data.student_id}" src="" class="w-full h-full object-cover">
+                        <span class="absolute text-slate-500 text-xs font-medium animate-pulse" id="placeholder-${data.student_id}">Connecting to camera...</span>
+                    </div>
+                    <div class="p-3 bg-slate-800/50 flex justify-between items-center gap-2">
+                        <div class="flex-1">
+                            <p class="text-xs text-slate-400 font-medium truncate" id="status-${data.student_id}">Status Normal</p>
+                        </div>
+                        <button onclick="terminateSession(${data.student_id}, '${data.exam_id}')" class="shrink-0 px-3 py-1.5 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-colors text-xs font-semibold">
+                            Terminate Exam
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            grid.insertAdjacentHTML('beforeend', cardHtml);
+            
+            const activeCount = document.getElementById('active-count');
+            if(activeCount) activeCount.innerText = parseInt(activeCount.innerText) + 1;
+        });
+
+        socket.on('admin_video_stream', (data) => {
+            const img = document.getElementById('stream-' + data.student_id);
+            const placeholder = document.getElementById('placeholder-' + data.student_id);
+            const status = document.getElementById('status-' + data.student_id);
+            const card = document.getElementById('student-card-' + data.student_id);
+            const dot = document.getElementById('dot-' + data.student_id);
+            
+            if (img) {
+                img.src = data.image;
+                if (placeholder) placeholder.style.display = 'none';
+                
+                if (data.violation) {
+                    status.innerText = data.violation;
+                    status.className = "text-xs text-red-400 font-bold truncate";
+                    card.classList.replace('border-slate-700', 'border-red-500');
+                    dot.classList.replace('bg-green-500', 'bg-red-500');
+                    
+                    setTimeout(() => {
+                        if(card) {
+                            card.classList.replace('border-red-500', 'border-slate-700');
+                            status.innerText = "Status Normal";
+                            status.className = "text-xs text-slate-400 font-medium truncate";
+                            dot.classList.replace('bg-red-500', 'bg-green-500');
+                        }
+                    }, 3000);
+                }
+            }
+        });
+
+        socket.on('admin_violation_alert', (data) => {
+            const badge = document.getElementById('warn-badge-' + data.student_id);
+            if (badge) {
+                let current = parseInt(badge.innerText.replace('Warnings:', '').trim());
+                if(!isNaN(current)) {
+                    badge.innerText = `Warnings: ${current + 1}`;
+                    badge.classList.replace('bg-slate-700', 'bg-red-500');
+                }
+            }
+            
+            const cardName = document.querySelector(`#student-card-${data.student_id} span[title]`);
+            const sName = cardName ? cardName.innerText : `Student ${data.student_id}`;
+            logThreat(sName, data.violation);
+        });
+        
+        socket.on('session_ended', (data) => {
+            const card = document.getElementById('student-card-' + data.student_id);
+            if (card) {
+                card.remove();
+                const activeCount = document.getElementById('active-count');
+                if(activeCount) {
+                    const newCount = Math.max(0, parseInt(activeCount.innerText) - 1);
+                    activeCount.innerText = newCount;
+                    
+                    if (newCount === 0) {
+                        const noMsg = document.getElementById('no-sessions-msg');
+                        if(noMsg) noMsg.style.display = 'flex';
+                    }
+                }
+            }
+            
+            const scoresList = document.getElementById('recent-scores-list');
+            const emptyScores = scoresList.querySelector('.text-center');
+            if (emptyScores) emptyScores.remove();
+            
+            const scoreHtml = `
+                <div class="bg-slate-800 p-4 rounded-lg flex justify-between items-center border border-slate-700 animate-[fadeIn_0.3s_ease-out]">
+                    <div>
+                        <p class="text-sm font-semibold text-white">${data.full_name || 'Unknown'}</p>
+                        <p class="text-xs text-slate-400 mt-0.5 truncate w-36">${data.title || 'Exam'}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xl font-bold ${data.is_disqualified ? 'text-red-500' : 'text-green-400'}">
+                            ${data.score !== undefined ? data.score : 0}
+                        </p>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            ${data.is_disqualified ? 'Disqualified' : (data.warnings_count || 0) + ' Warnings'}
+                        </p>
+                    </div>
+                </div>
+            `;
+            scoresList.insertAdjacentHTML('afterbegin', scoreHtml);
+            if (scoresList.children.length > 8) scoresList.lastElementChild.remove();
+        });
+
+        function unbanStudent(studentId) {
+            if (confirm("Are you sure you want to restore access for this suspended account?")) {
+                fetch('/admin/unban', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_id: studentId })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') location.reload();
+                });
+            }
+        }
+
+        function terminateSession(studentId, examId) {
+            if (confirm("Are you sure you want to end this exam immediately? The student's score will be set to 0.")) {
+                fetch('/api/terminate_session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_id: studentId, exam_id: examId })
+                });
+            }
+        }
+        
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

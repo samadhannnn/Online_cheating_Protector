@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - ProctorAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #09090b;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            w: 100vw;
+            h: 100vh;
+            z-index: -1;
+            background: radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.15), transparent 40%),
+                radial-gradient(circle at 20% 80%, rgba(139, 92, 246, 0.1), transparent 40%);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen p-8 relative">
+
+    <div class="animated-bg"></div>
+
+    <div class="max-w-6xl mx-auto">
+        <header
+            class="flex justify-between items-center mb-16 glass-card p-6 rounded-3xl border-l-4 border-blue-500 shadow-xl">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 p-[2px]">
+                    <div
+                        class="w-full h-full bg-slate-900 rounded-full flex items-center justify-center font-bold text-xl">
+                        {{ session['student_name'][0]|upper }}
+                    </div>
+                </div>
+                <div>
+                    <h1
+                        class="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+                        Student Portal</h1>
+                    <p class="text-slate-400 font-semibold tracking-wide uppercase text-sm mt-1">Welcome back, {{
+                        session['student_name'] }}</p>
+                </div>
+            </div>
+            <a href="/logout"
+                class="glass-card px-8 py-3 rounded-xl text-slate-300 hover:text-white hover:bg-red-500/20 font-bold transition-all border border-transparent hover:border-red-500/30">
+                Sign Out
+            </a>
+        </header>
+
+        {% if is_banned %}
+        <div
+            class="glass-card p-16 rounded-3xl text-center border-t-4 border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.15)] relative overflow-hidden">
+            <div
+                class="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/30">
+                <svg class="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                    </path>
+                </svg>
+            </div>
+            <h2 class="text-4xl font-black text-white mb-4 uppercase tracking-tight">Account Suspended</h2>
+            <p class="text-slate-400 text-lg max-w-xl mx-auto mb-6">
+                Your ProctorAI monitoring account has been suspended for 24 hours due to exceeding the maximum allowed
+                cheating warnings (5 violations).
+            </p>
+            <div
+                class="inline-block bg-red-500/20 text-red-400 border border-red-500/30 px-6 py-3 rounded-xl font-bold tracking-widest text-sm uppercase">
+                Access Restricted
+            </div>
+        </div>
+        {% else %}
+        <h2 class="text-2xl font-bold mb-8 flex items-center gap-3">
+            <span class="w-2 h-8 bg-blue-500 rounded-full block"></span>
+            Available Examinations
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% for exam in exams %}
+            <div
+                class="glass-card p-8 rounded-3xl group hover:-translate-y-2 transition-all duration-300 hover:shadow-[0_15px_40px_rgba(59,130,246,0.2)] border-t border-slate-700/50">
+                <div
+                    class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-6 border border-blue-500/20 group-hover:scale-110 transition-transform">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                </div>
+
+                <h3 class="text-2xl font-bold mb-3 group-hover:text-blue-400 transition-colors">{{ exam['title'] }}</h3>
+
+                <div
+                    class="flex gap-4 text-sm font-bold text-slate-400 uppercase tracking-widest mb-8 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                    <span class="flex items-center gap-1">⏱ {{ exam['duration_minutes'] }}m</span>
+                    <span class="flex items-center gap-1">🎯 {{ exam['total_marks'] }} Pts</span>
+                </div>
+
+                {% if exam['id'] in completed_exam_ids %}
+                <button disabled
+                    class="w-full bg-slate-800 text-slate-500 border border-slate-700 font-bold py-4 rounded-xl uppercase tracking-widest text-sm cursor-not-allowed">
+                    Already Completed
+                </button>
+                {% else %}
+                <button onclick="showGuidelines('{{ exam['id'] }}')"
+                    class="w-full bg-blue-600/20 text-blue-400 border border-blue-500/30 group-hover:bg-blue-600 group-hover:text-white font-bold py-4 rounded-xl transition-all uppercase tracking-widest text-sm shadow-[0_0_15px_rgba(59,130,246,0.15)] group-hover:shadow-[0_0_25px_rgba(59,130,246,0.4)]">
+                    Begin Assessment
+                </button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Guidelines Modal -->
+    <div id="guidelinesModal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-md hidden items-center justify-center z-50 p-4 transition-all duration-300 opacity-0 scale-95 pointer-events-none">
+        <div
+            class="glass-card p-10 rounded-[2.5rem] max-w-2xl w-full border-2 border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.15)] relative overflow-hidden">
+
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-orange-500 to-red-500"></div>
+
+            <div class="flex items-center gap-4 mb-6">
+                <div
+                    class="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center animate-pulse border border-red-500/50">
+                    <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                        </path>
+                    </svg>
+                </div>
+                <h2 class="text-3xl font-black text-white uppercase tracking-tight">AI Surveillance Active</h2>
+            </div>
+
+            <p class="text-slate-300 mb-8 leading-relaxed text-lg">
+                You are about to enter a highly secure, AI-monitored examination environment. Advanced Deep Learning
+                models will continuously analyze your webcam feed, screen activity, and behavior.
+            </p>
+
+            <div class="bg-red-500/10 border border-red-500/20 p-6 rounded-2xl mb-8">
+                <ul class="space-y-4 text-slate-300 list-none">
+                    <li class="flex items-start gap-3">
+                        <span class="text-red-500 font-bold mt-1">✗</span>
+                        <span><strong class="text-white">Strictly Prohibited:</strong> Mobile phone usage, multiple
+                            persons in frame, or covering the camera.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="text-orange-500 font-bold mt-1">!</span>
+                        <span>Continuous looking away from the screen will trigger AI warnings.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="text-blue-500 font-bold mt-1">✉</span>
+                        <span><strong class="text-white">Email Notification Policy:</strong> For warnings 1 through 4, an automated email containing screenshot proof of the violation will be sent to your registered email address.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="text-red-500 font-bold mt-1">⚠</span>
+                        <span><strong class="text-white">5th Warning Consequence:</strong> Upon reaching 5 warnings, the exam will automatically submit with a <strong class="text-white">ZERO (0) score</strong>, and your account will be <strong class="text-white">BANNED</strong> from the platform for 24 hours. A final ban notice will be emailed to you.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <label
+                class="flex items-center gap-4 mb-8 cursor-pointer group p-4 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/10">
+                <input type="checkbox" id="agree"
+                    class="w-6 h-6 rounded border-slate-600 bg-slate-800 accent-blue-600 cursor-pointer">
+                <span class="text-slate-300 font-semibold group-hover:text-white transition-colors">I acknowledge the
+                    rules and agree to be continuously monitored by ProctorAI.</span>
+            </label>
+
+            <div class="flex gap-4">
+                <button onclick="closeGuidelines()"
+                    class="flex-1 glass-card border border-slate-600 hover:bg-slate-700/50 text-white font-bold py-4 rounded-xl transition-all uppercase tracking-widest text-sm">Cancel</button>
+                <button onclick="startExam()" id="startBtn" disabled
+                    class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 disabled:opacity-50 disabled:from-slate-700 disabled:to-slate-700 text-white font-bold py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(59,130,246,0.4)] disabled:shadow-none uppercase tracking-widest text-sm disabled:cursor-not-allowed transform hover:-translate-y-1 disabled:transform-none">Proceed
+                    to Exam</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentExamId = null;
+        const modal = document.getElementById('guidelinesModal');
+        const agreeCheck = document.getElementById('agree');
+        const startBtn = document.getElementById('startBtn');
+
+        function showGuidelines(examId) {
+            currentExamId = examId;
+            modal.classList.remove('hidden');
+            // Small delay for animation
+            setTimeout(() => {
+                modal.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                modal.classList.add('flex', 'opacity-100', 'scale-100');
+            }, 10);
+            agreeCheck.checked = false;
+            startBtn.disabled = true;
+        }
+
+        function closeGuidelines() {
+            modal.classList.remove('opacity-100', 'scale-100');
+            modal.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        agreeCheck.addEventListener('change', (e) => {
+            startBtn.disabled = !e.target.checked;
+        });
+
+        function startExam() {
+            if (currentExamId && agreeCheck.checked) {
+                window.location.href = `/exam/start/${currentExamId}`;
+            }
+        }
+    </script>
+</body>
+
+</html>
