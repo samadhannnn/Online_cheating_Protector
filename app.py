@@ -14,6 +14,9 @@ app = Flask(__name__)
 app.config.from_object(Config)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
+# Automatically initialize database on startup (crucial for Docker/Render deployments)
+init_db()
+
 processor = VideoProcessor()
 
 @app.route('/screenshots/<path:filename>')

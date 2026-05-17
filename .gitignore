@@ -11,4 +11,8 @@ screenshots/*
 !screenshots/.keep
 logs/*
 !logs/.keep
+results/*
+!results/.keep
+database/*
+!database/.keep
 .DS_Store
