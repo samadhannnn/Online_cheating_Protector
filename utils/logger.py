@@ -43,3 +43,5 @@ def log_violation(student_id, exam_id, violation_type, screenshot_path=None):
             writer.writerow(['student_id', 'exam_id', 'violation_type', 'screenshot_path', 'timestamp'])
         import datetime
         writer.writerow([student_id, exam_id, violation_type, screenshot_path, datetime.datetime.now().isoformat()])
+    
+    return True  # FIX: explicit True so callers can distinguish from False (cooldown blocked)

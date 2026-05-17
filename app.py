@@ -200,8 +200,11 @@ def start_exam(exam_id):
     conn = get_db_connection()
     c = conn.cursor()
     
-    # Init session
-    c.execute('INSERT INTO sessions (student_id, exam_id) VALUES (?, ?)', (student_id, exam_id))
+    # Init session only if one doesn't already exist (prevents duplicates on page refresh)
+    existing_session = c.execute('SELECT * FROM sessions WHERE student_id = ? AND exam_id = ?', (student_id, exam_id)).fetchone()
+    if not existing_session:
+        c.execute('INSERT INTO sessions (student_id, exam_id) VALUES (?, ?)', (student_id, exam_id))
+    
     # Init result if not exists
     res = c.execute('SELECT * FROM results WHERE student_id = ? AND exam_id = ?', (student_id, exam_id)).fetchone()
     if not res:
@@ -347,13 +350,9 @@ def start_exam(exam_id):
         
     conn.commit()
     
-    # Create or get session
+    # Fetch the current session record (guaranteed to exist from above)
+    conn.commit()
     session_rec = c.execute('SELECT * FROM sessions WHERE student_id = ? AND exam_id = ?', (student_id, exam_id)).fetchone()
-    
-    if not session_rec:
-        c.execute('INSERT INTO sessions (student_id, exam_id) VALUES (?, ?)', (student_id, exam_id))
-        conn.commit()
-        session_rec = c.execute('SELECT * FROM sessions WHERE student_id = ? AND exam_id = ?', (student_id, exam_id)).fetchone()
         
     # Calculate true remaining time to prevent infinite time via refresh exploit
     start_time_str = session_rec['start_time']

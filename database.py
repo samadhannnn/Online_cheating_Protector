@@ -115,10 +115,11 @@ def init_db():
     
     conn.commit()
     
-    # Insert default admin if not exists
-    c.execute('SELECT * FROM admins WHERE username="admin"')
+    # Insert default admin if not exists (use parameterized query)
+    c.execute('SELECT * FROM admins WHERE username = ?', ('admin',))
     if not c.fetchone():
         c.execute('INSERT INTO admins (username, password) VALUES (?, ?)', ('admin', 'admin123'))
+        conn.commit()  # FIX: commit admin insert
         
     # Insert mock exams if not exists
     c.execute('SELECT * FROM exams')
